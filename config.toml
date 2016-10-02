@@ -1,0 +1,118 @@
+baseurl = "http://github.unix4fun.io/"
+title = "ngup, stfu, rtfm & KISS"
+languageCode = "en-us"
+author = "uni4xfun"
+# Shown in the side menu
+copyright = "&copy; unix4fun 2016.<br>All rights reserved."
+canonifyurls = true
+paginate = 10
+theme = "blackburn"
+
+[indexes]
+  tag = "tags"
+  topic = "topics"
+  author = "authors"
+
+[params]
+  # Shown in the home page
+  subtitle = "(for fun, remember...?)"
+  brand = "unix4fun"
+#  brand = '<img src="/img/t.jpg" width="35px"><br>unix4fun'
+  googleAnalytics = "UA-85012385-1"
+  disqus = "unix4fun"
+  disqusShortname = "unix4fun"
+  # CSS name for highlight.js
+  highlightjs = "androidstudio"
+  dateFormat = "02 Jan 2006, 15:04"
+  # Include any custom CSS and/or JS files
+  # (relative to /static folder)
+#  custom_css = ["css/my.css"]
+#  custom_js = ["js/my.js"]
+
+[menu]
+  # Shown in the side menu.
+#  [[menu.main]]
+#    name = "About"
+#    pre = "<i class='fa fa-user fa-fw'></i>"
+#    weight = 1
+#    identifier = "about"
+#    url = "/about/"
+#  [[menu.main]]
+#    name = "home"
+#    pre = "<i class='fa fa-home fa-fw'></i>"
+#    weight = 0
+#    identifier = "home"
+#    url = "/"
+  [[menu.main]]
+    name = "posts"
+    pre = "<i class='fa fa-list fa-fw'></i>"
+    weight = 0
+    identifier = "post"
+    url = "/post/"
+  [[menu.main]]
+    name = "tags"
+    pre = "<i class='fa fa-tags fa-fw'></i>"
+    weight = 1
+    identifier = "tag"
+    url = "/tags/"
+  [[menu.main]]
+    name = "stories"
+    pre = "<i class='fa fa-folder fa-fw'></i>"
+    weight = 2
+    identifier = "topic"
+    url = "/topics/"
+  [[menu.main]]
+    name = "authors"
+    pre = "<i class='fa fa-user fa-fw'></i>"
+    weight = 3
+    identifier = "author"
+    url = "/authors/"
+  [[menu.main]]
+    name = "About"
+    pre = "<i class='fa fa-phone fa-fw'></i>"
+    weight = 4
+    url = "/about/"
+
+[social]
+  # Link your social networking accounts to the side menu
+  # by entering your username or ID.
+
+  # SNS microblogging
+  twitter = ""
+  gnusocial = "" # Specify href (e.g. https://quitter.se/yourusername)
+  facebook = ""
+  googleplus = ""
+  weibo = ""
+
+  # SNS photo/video sharing
+  instagram = ""
+  flickr = ""
+  pinterest = ""
+  youtube = ""
+  vimeo = ""
+  vine = ""
+  slideshare = ""
+
+  # SNS career oriented
+  linkedin = ""
+  xing = ""
+
+  # SNS news
+  reddit = ""
+  hackernews = ""
+
+  # Techie
+  github = "unix4fun"
+  bitbucket = ""
+  stackoverflow = ""
+  serverfault = ""
+
+  # Gaming
+  steam = ""
+
+  # Music
+  lastfm = ""
+
+  # Other
+  keybase = ""
+

@@ -190,24 +190,17 @@ On va tenter de faire exécuter un `execve()` via des gadgets, du coup.  Ce qu'o
   
 	 RAX <- 0x3b (= 59, la valeur du syscall execve() sur 64bits)
 	 RDI <- "/bin/sh" ou quelque chose du genre
-	 RSX <- 0x00 (NULL)
+	 RSI <- 0x00 (NULL)
 	 RDX <- 0x00 (NULL)
   
 Donc, le layout de la pile en sortie de `main()` devrait ressembler à quelque chose comme ceci:  
-  
-> [AAA....A] [BBBBBB00] [@(pop rax; ret)] [0x3b] [@(pop rdi; ret)] [@("/bin/sh")]... [@(execve)]
-> ^          ^          ^
-> |          |          |
-> buffer     $rbp       $rip
 
-Une fois arrivé à la fin de la fonction `main()`, le système va donc exécuter les instructions dont l'adresse est stockée en `$rip`: `pop rax; ret`.  Quand cette suite d'instruction est en cours d'exécution, le haut de la pile devient alors le mot de 8 octets suivant, et c'est ce mot qui est `pop`-é pour être mis dans `$rax`.  On a alors une pile dont le layout ressemble à ça:
-  
-> [AAA....A] [BBBBBB00] [@(pop rax; ret)] [0x3b] [@(pop rdi; ret)] [@("/bin/sh")]... [@(execve)]
-> ^          ^                                   ^
-> |          |                                   |
-> buffer     $rbp                                $rip
+	[ AAA....AAAA | BBBBBB00 | @(pop rax; ret) | 0x3b | @(pop rdi; ret) | "/bin/sh" | @(pop rsi; ret) | 0x0  | @(pop rdx; ret) | 0x0 | @syscall ]
+         ^                         ^
+         |                         |
+         buffer                    $rip écrasé par cette adresse
 
-On exécutera le `pop rdi; ret`, qui prendra la valeur sur la pile à ce moment, à savoir l'adresse de la chaîne de caractères `"/bin/sh"` pour la stocker dans `$rdi`.  Et ainsi de suite.
+Une fois arrivé à la fin de la fonction `main()`, le système va donc exécuter les instructions dont l'adresse est stockée en `$rip`, à savoir `pop rax; ret`.  Quand cette suite d'instructions est en cours d'exécution, le haut de la pile devient alors le mot de 8 octets suivant (`0x0000003b`), et c'est ce mot qui est `pop`-é pour être mis dans `$rax`.  On exécutera alors le `pop rdi; ret`, qui prendra la valeur sur la pile à ce moment, à savoir l'adresse de la chaîne de caractères `"/bin/sh"` pour la stocker dans `$rdi`.  Et ainsi de suite.
 
 On va utiliser l'outil téléchargé (il y en a d'autres, comme `ROPgadget`), pour avoir les adresses des instructions intéressantes:  
   

@@ -130,7 +130,7 @@ On voit que le système réserve `0x120` (288) bytes dans la pile pour faire de 
 	   0x000000000040107d <+31>:    mov    rdi,rax
 	   0x0000000000401080 <+34>:    call   0x408750 <gets>
   
-A l'aide de ces trois instruction, on déduit que le registre `$rax` contient l'adresse du buffer qui sera passé à la fonction `gets()`.  Et que sa base est à `0x110` (272) bytes du début de la pile (`$rbp`).  On en déduit donc que si on écrit 272 bytes dans `buffer`, alors on arrivera pile a la limite de `$rbp` qui a été empilé.  Les 8 prochains bytes vont écraser $rbp, et les 8 suivant écraseront `$rip`.  C'est ce registre qu'on veut contrôler.  On va tester (par acquis de conscience on met une adresse valide dans `$rbp`, i.e. `0x0000424242424242`, et `0x0000434343434343` dans `$rip`:  
+A l'aide de ces trois instructions, on déduit que le registre `$rax` contient l'adresse du buffer qui sera passé à la fonction `gets()`.  Et que sa base est à `0x110` (272) bytes du début de la pile (`$rbp`).  On en déduit donc que si on écrit 272 bytes dans `buffer`, alors on arrivera pile a la limite de `$rbp` qui a été empilé.  Les 8 prochains bytes vont écraser $rbp, et les 8 suivant écraseront `$rip`.  C'est ce registre qu'on veut contrôler.  On va tester (par acquis de conscience on met une adresse valide dans `$rbp`, i.e. `0x0000424242424242`, et `0x0000434343434343` dans `$rip`):  
   
 	gdb$ r < <(perl -e 'print "A"x272 . "B"x6 . "\x00\x00" . "C"x6 . "\x00\x00"')
 	----------------------------------------------------------------------------------------------------------------------[regs]

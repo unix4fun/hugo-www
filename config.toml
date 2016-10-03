@@ -1,4 +1,4 @@
-baseurl = "http://unix4fun.github.io/"
+baseurl = "https://unix4fun.github.io/"
 title = "ngup, stfu, rtfm & KISS"
 languageCode = "en-us"
 author = "uni4xfun"

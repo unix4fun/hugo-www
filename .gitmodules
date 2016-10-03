@@ -1,0 +1,3 @@
+[submodule "blackburn"]
+	path = themes/blackburn.submod
+	url = https://github.com/yoshiharuyamashita/blackburn.git

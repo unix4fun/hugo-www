@@ -188,18 +188,27 @@ Récuperons un outil pour trouver des gadgets (c'est ainsi qu'on appelle ces sé
   
 On va tenter de faire exécuter un `execve()` via des gadgets, du coup.  Ce qu'on souhaite, c'est faire executer `execve("/bin/sh", NULL, NULL);`.  Notons que d'après la documentation de l'ABI du système, `$rax` doit contenir le numéro du syscall (et le contenu sera écrasé lors du retour de fonction, si jamais il se produit... dans notre cas on s'en moque, puisqu'on veut spawner un shell).  Il faudra donc mettre les registres dans l'état suivant:  
   
-	 RAX <- 59 (la valeur du syscall execve() sur 64bits, avant int 0x80)
+	 RAX <- 0x3b (= 59, la valeur du syscall execve() sur 64bits)
 	 RDI <- "/bin/sh" ou quelque chose du genre
-	 RSX <- 0 (NULL)
-	 RDX <- 0 (NULL)
+	 RSX <- 0x00 (NULL)
+	 RDX <- 0x00 (NULL)
   
-Donc, le layout de la pile devrait ressembler à quelque chose comme ceci:  
+Donc, le layout de la pile en sortie de `main()` devrait ressembler à quelque chose comme ceci:  
   
-	[AAA....A] [BBBBBB00] [pop rax] [valeur à mettre dans rax] [pop rdi] [valeur à mettre dans rdi]... [appel à execve()]
-	^	   ^          ^
-	|	   |          |
-	buffer	   $rbp       $rip
+> [AAA....A] [BBBBBB00] [@(pop rax; ret)] [0x3b] [@(pop rdi; ret)] [@("/bin/sh")]... [@(execve)]
+> ^          ^          ^
+> |          |          |
+> buffer     $rbp       $rip
+
+Une fois arrivé à la fin de la fonction `main()`, le système va donc exécuter les instructions dont l'adresse est stockée en `$rip`: `pop rax; ret`.  Quand cette suite d'instruction est en cours d'exécution, le haut de la pile devient alors le mot de 8 octets suivant, et c'est ce mot qui est `pop`-é pour être mis dans `$rax`.  On a alors une pile dont le layout ressemble à ça:
   
+> [AAA....A] [BBBBBB00] [@(pop rax; ret)] [0x3b] [@(pop rdi; ret)] [@("/bin/sh")]... [@(execve)]
+> ^          ^                                   ^
+> |          |                                   |
+> buffer     $rbp                                $rip
+
+On exécutera le `pop rdi; ret`, qui prendra la valeur sur la pile à ce moment, à savoir l'adresse de la chaîne de caractères `"/bin/sh"` pour la stocker dans `$rdi`.  Et ainsi de suite.
+
 On va utiliser l'outil téléchargé (il y en a d'autres, comme `ROPgadget`), pour avoir les adresses des instructions intéressantes:  
   
 	$ rp-lin-x64 --file ./prog --unique -r 1 | grep "pop rax"
@@ -227,14 +236,19 @@ Et pour finir, on cherche l'appel à un syscall.  Notons encore une fois une dif
 Bien, on a l'adresse a empiler en dernier!  
   
 
-Maintenant, si vous avez fait attention, vous avez remarqué qu'on a zappé quelque chose!  On doit resoudre le probleme de la chaîne de caractères censée être utilisée par execve().  On ne trouve pas "/bin/sh" dans l'image du programme en mémoire.  On va utiliser un trick:  trouver une petite chaîne dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qu'on ajoutera au `PATH`.  
+Maintenant, si vous avez fait attention, vous avez remarqué qu'on a zappé quelque chose!  On doit resoudre le probleme de la chaîne de caractères censée être utilisée par execve().
+
+	$ nm -a ./ch34 | grep "/bin/sh"
+        $
+
+On ne trouve pas "/bin/sh" dans le binaire.  On va utiliser un trick:  trouver une petite chaîne dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qu'on ajoutera au `PATH`.  
   
 	$ readelf -x .rodata ./prog | less
 	[...]
 	  0x00493c00 42654000 00000000 68654000 00000000 Be@.....he@.....
 	[...]
   
-On trouve la séquence `42654000`, qui correspond à `"Be@"` terminée par un nul-byte.  Son adresse est `0x00493c00`, et on l'utilisera dans `$rdi`.  Ensuite, on crée un petit shell script dans `/tmp/p`:  
+On trouve la séquence `42654000`, qui correspond à `"Be@"` en ASCII, terminée par un nul-byte.  Son adresse est `0x00493c00`, et on l'utilisera dans `$rdi`.  Ensuite, on crée un petit shell script dans `/tmp/p`:  
   
 	$ cat > /tmp/p/Be@
 	#!/bin/dash
@@ -242,7 +256,7 @@ On trouve la séquence `42654000`, qui correspond à `"Be@"` terminée par un nu
 	/bin/dash
 	$ chmod +x /tmp/p/Be@
   
-Ainsi, si `execve()` invoque la commande `Be@`, elle sera dans notre `PATH`, et nous donnera un shell.  Magique non?  Ca évite une fastitieuse reconstruction d'un path type `/bin/sh` via des gadgets.  
+Ainsi, si `execve()` invoque la commande `Be@`, elle sera dans notre `PATH`, et nous donnera un shell.  Magique non?  Ca évite une fastitieuse reconstruction d'un path type `"/bin/sh"` via des gadgets.  
   
 
 Boooon, que les choses sérieuses commencent!  On va construire notre ropchain maintenant, en prenant soin de respecter l'endianness:  

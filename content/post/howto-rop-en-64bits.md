@@ -11,7 +11,7 @@ topics = []
 ## Introduction
 
 
-Bon ben dans la même veine que le post précedent, je vais tâcher d'expliquer comment exploiter un buffer overflow sur la pile, en utilisant la méthode de Return-Oriented Programming.  Cette technique est utilisée quand la pile n'est pas exécutable, l'idée étant de sauter dans une portion de code qui l'est, et petit à petit, reconstruire un flot d'exécution qui mène à... obtenir un shell avec des droits plus importants, dans le cas présent.  
+Bon ben dans la même veine que le post précedent, je vais tâcher d'expliquer comment exploiter un buffer overflow sur la stack, en utilisant la méthode de Return-Oriented Programming.  Cette technique est utilisée quand la stack n'est pas exécutable, l'idée étant de sauter dans une portion de code qui l'est, et petit à petit, reconstruire un flot d'exécution qui mène à... obtenir un shell avec des droits plus importants, dans le cas présent.  
 
 	$ ll
 	total 876
@@ -65,9 +65,9 @@ Bon, il y a un buffer overflow évident à cause de `gets()`.  Tout le monde sai
 
 Ici, il y a deux choses à avoir en tete:  
 
-- la pile est non-exécutable
+- la stack est non-exécutable
 
-Ce qui fait qu'on ne pourra pas pousser un shellcode directement dans la pile, via un buffer à exploiter ou une variable d'environnement.  Il faudra faire du ret2libc, ou du ROP.  
+Ce qui fait qu'on ne pourra pas pousser un shellcode directement dans la stack, via un buffer à exploiter ou une variable d'environnement.  Il faudra faire du ret2libc, ou du ROP.  
 
 - le programme tourne en 64 bits
 
@@ -104,13 +104,15 @@ Ca semble jouable? Le man de `mprotect(2)` nous dit qu'il faut PROT_EXEC pour re
   
 Il faudra donc mettre dans l'ordre, sur la stack:  
   
-	[ 0x7 | stacksize | $esp | @__mprotect | return addr ]
+	adresses basses [ 0x7 | stacksize | $esp | @__mprotect | return addr ] adresses hautes
   
-Euh... en fait non.  En réalité sur 64 bits, le passage de paramètres d'une fonction se fait via les registres, pas en ajoutant sur la pile.  Donc l'appel sera de la forme :  
-  
-	[ @__mprotect | return addr ]
-  
-Les paramètres sont ensuite passés via les registres `$rdi`, `$rsi`, `$rdx`, `$rcx`, `$r8`, et `$r9`.  Si vraiment il faut encore passer plus de paramètres à la fonction, alors c'est mis sur la stack (mais ça reste rare).  Mais on ne devrait pas aller jusque là, puisque `mprotect()` ne prend que 3 arguments.  
+Euh... en fait non.  Deux choses:
+
+- Pour une fonction qui n'est pas un `syscall`, sur x86-32 les paramètres sont passés sur la stack.  Alors que sur x86-64 on passe par les registres, donc la stack sera de la forme:
+
+       	adresses basses [ @__mprotect | return addr ] adresses hautes
+
+- Pour un `syscall` dans le deux cas on passe par les registres... mais ce ne sont pas les mêmes.  Sur x86-64 les paramètres sont passés par les registres `$rdi`, `$rsi`, `$rdx`, `$rcx`, `$r8`, et `$r9`.  Si vraiment il faut encore passer plus de paramètres à la fonction, alors c'est mis sur la stack (mais ça reste rare).  Mais on ne devrait pas aller jusque là, puisque `mprotect()` ne prend que 3 arguments.  
   
 Une fois la stack rendue exécutable, il suffira d'avoir empilé l'adresse de notre shellcode (`return addr` dans le petit schéma) pour sauter où on souhaite.  
   
@@ -124,13 +126,13 @@ Une fois la stack rendue exécutable, il suffira d'avoir empilé l'adresse de no
 	   0x0000000000401062 <+4>:     sub    rsp,0x120
 	   [...]
   
-On voit que le système réserve `0x120` (288) bytes dans la pile pour faire de la place aux variables locales, etc.  
+On voit que le système réserve `0x120` (288) bytes dans la stack pour faire de la place aux variables locales, etc.  
   
 	   0x0000000000401076 <+24>:    lea    rax,[rbp-0x110]
 	   0x000000000040107d <+31>:    mov    rdi,rax
 	   0x0000000000401080 <+34>:    call   0x408750 <gets>
   
-A l'aide de ces trois instructions, on déduit que le registre `$rax` contient l'adresse du buffer qui sera passé à la fonction `gets()`.  Et que sa base est à `0x110` (272) bytes du début de la pile (`$rbp`).  On en déduit donc que si on écrit 272 bytes dans `buffer`, alors on arrivera pile a la limite de `$rbp` qui a été empilé.  Les 8 prochains bytes vont écraser $rbp, et les 8 suivant écraseront `$rip`.  C'est ce registre qu'on veut contrôler.  On va tester (par acquis de conscience on met une adresse valide dans `$rbp`, i.e. `0x0000424242424242`, et `0x0000434343434343` dans `$rip`):  
+A l'aide de ces trois instructions, on déduit que le registre `$rax` contient l'adresse du buffer qui sera passé à la fonction `gets()`.  Et que sa base est à `0x110` (272) bytes du début de la stack (`$rbp`).  On en déduit donc que si on écrit 272 bytes dans `buffer`, alors on arrivera stack a la limite de `$rbp` qui a été empilé.  Les 8 prochains bytes vont écraser $rbp, et les 8 suivant écraseront `$rip`.  C'est ce registre qu'on veut contrôler.  On va tester (par acquis de conscience on met une adresse valide dans `$rbp`, i.e. `0x0000424242424242`, et `0x0000434343434343` dans `$rip`):  
   
 	gdb$ r < <(perl -e 'print "A"x272 . "B"x6 . "\x00\x00" . "C"x6 . "\x00\x00"')
 	----------------------------------------------------------------------------------------------------------------------[regs]
@@ -191,14 +193,14 @@ On va tenter de faire exécuter un `execve()` via des gadgets, du coup.  Ce qu'o
 	 RSI <- 0x00 (NULL)
 	 RDX <- 0x00 (NULL)
   
-Donc, le layout de la pile en sortie de `main()` devrait ressembler à quelque chose comme ceci:  
+Donc, le layout de la stack en sortie de `main()` devrait ressembler à quelque chose comme ceci:  
 
 	[ AAA....AAAA | BBBBBB00 | @(pop rax; ret) | 0x3b | @(pop rdi; ret) | "/bin/sh" | @(pop rsi; ret) | 0x0  | @(pop rdx; ret) | 0x0 | @syscall ]
          ^                         ^
          |                         |
          buffer                    $rip écrasé par cette adresse
 
-Une fois arrivé à la fin de la fonction `main()`, le système va donc exécuter les instructions dont l'adresse est stockée en `$rip`, à savoir `pop rax; ret`.  Quand cette suite d'instructions est en cours d'exécution, le haut de la pile devient alors le mot de 8 octets suivant (`0x0000003b`), et c'est ce mot qui est `pop`-é pour être mis dans `$rax`.  On exécutera alors le `pop rdi; ret`, qui prendra la valeur sur la pile à ce moment, à savoir l'adresse de la chaîne de caractères `"/bin/sh"` pour la stocker dans `$rdi`.  Et ainsi de suite.
+Une fois arrivé à la fin de la fonction `main()`, le système va donc exécuter les instructions dont l'adresse est stockée en `$rip`, à savoir `pop rax; ret`.  Quand cette suite d'instructions est en cours d'exécution, le haut de la stack devient alors le mot de 8 octets suivant (`0x0000003b`), et c'est ce mot qui est `pop`-é pour être mis dans `$rax`.  On exécutera alors le `pop rdi; ret`, qui prendra la valeur sur la stack à ce moment, à savoir l'adresse de la chaîne de caractères `"/bin/sh"` pour la stocker dans `$rdi`.  Et ainsi de suite.
 
 On va utiliser un outil dédié (il y en a d'autres, comme `ROPgadget`), pour avoir les adresses des instructions intéressantes:
 
@@ -227,7 +229,7 @@ Et pour finir, on cherche l'appel à un syscall.  Notons encore une fois une dif
 	[...]
 	0x00400488: syscall  ;  (95 found)
   
-Bien, on a l'adresse a empiler en dernier!  
+Bien, on a l'adresse a empile en dernier!  
   
 
 Maintenant, si vous avez fait attention, vous avez remarqué qu'on a zappé quelque chose!  On doit resoudre le probleme de la chaîne de caractères censée être utilisée par execve().

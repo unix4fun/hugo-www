@@ -104,7 +104,7 @@ Ca semble jouable? Le man de `mprotect(2)` nous dit qu'il faut PROT_EXEC pour re
   
 Il faudra donc mettre dans l'ordre, sur la stack:  
   
-	adresses basses [ 0x7 | stacksize | $esp | @__mprotect | return addr ] adresses hautes
+	adresses basses [ @__mprotect | return addr | 0x7 | stacksize | $esp ] adresses hautes
   
 Euh... en fait non.  Deux choses:
 

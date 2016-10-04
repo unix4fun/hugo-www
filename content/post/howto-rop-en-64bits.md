@@ -185,6 +185,11 @@ Récuperons un outil pour trouver des gadgets (c'est ainsi qu'on appelle ces sé
   
 	$ mkdir /tmp/p
 	$ export PATH=$PATH:/tmp/p
+
+	$ wget https://github.com/downloads/0vercl0k/rp/rp-lin-x64 -O /tmp/p/
+	$ chmod +x /tmp/p/rp-lin-x64
+
+On a choisi `rp++`, un peu par hasard.  Et parce que ce qu'on va faire est simple (il y en a d'autres, comme `ROPgadget`), car on veut juste `pop`-er des valeurs de la stack pour les mettre dans des registres.  Nothing fancy, comme on dit.
   
 On va tenter de faire exécuter un `execve()` via des gadgets, du coup.  Ce qu'on souhaite, c'est faire executer `execve("/bin/sh", NULL, NULL);`.  Notons que d'après la documentation de l'ABI du système, `$rax` doit contenir le numéro du syscall (et le contenu sera écrasé lors du retour de fonction, si jamais il se produit... dans notre cas on s'en moque, puisqu'on veut spawner un shell).  Il faudra donc mettre les registres dans l'état suivant:  
   
@@ -201,11 +206,6 @@ Donc, le layout de la stack en sortie de `main()` devrait ressembler à quelque 
          buffer                    $rip écrasé par cette adresse
 
 Une fois arrivé à la fin de la fonction `main()`, le système va donc exécuter les instructions dont l'adresse est stockée en `$rip`, à savoir `pop rax; ret`.  Quand cette suite d'instructions est en cours d'exécution, le haut de la stack devient alors le mot de 8 octets suivant (`0x0000003b`), et c'est ce mot qui est `pop`-é pour être mis dans `$rax`.  On exécutera alors le `pop rdi; ret`, qui prendra la valeur sur la stack à ce moment, à savoir l'adresse de la chaîne de caractères `"/bin/sh"` pour la stocker dans `$rdi`.  Et ainsi de suite.
-
-On va utiliser un outil dédié (il y en a d'autres, comme `ROPgadget`), pour avoir les adresses des instructions intéressantes:
-
-	$ wget https://github.com/downloads/0vercl0k/rp/rp-lin-x64 -O /tmp/p/
-	$ chmod +x /tmp/p/rp-lin-x64
   
 	$ rp-lin-x64 --file ./prog --unique -r 1 | grep "pop rax"
 	[...]

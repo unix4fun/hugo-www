@@ -229,15 +229,15 @@ Et pour finir, on cherche l'appel à un syscall.  Notons encore une fois une dif
 	[...]
 	0x00400488: syscall  ;  (95 found)
   
-Bien, on a l'adresse a empile en dernier!  
+Bien, on a l'adresse à empiler en dernier!  
   
 
-Maintenant, si vous avez fait attention, vous avez remarqué qu'on a zappé quelque chose!  On doit resoudre le probleme de la chaîne de caractères censée être utilisée par execve().
+Maintenant, si vous avez fait attention, vous avez remarqué qu'on a zappé quelque chose!  On doit resoudre le probleme de la chaîne de caractères censée être utilisée par `execve()`.
 
 	$ nm -a ./ch34 | grep "/bin/sh"
 	$
 
-On ne trouve pas "/bin/sh" dans le binaire, ni d'autres chemins susceptible de nous plaire...  On va utiliser un trick:  trouver une petite chaîne dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qui est dans le `PATH`.  
+On ne trouve pas `"/bin/sh"` dans le binaire, ni d'autres chemins susceptible de nous plaire...  On va utiliser un trick:  trouver une petite chaîne dispo en mémoire, qui ne corresponde pas a une commande déjà existante, puis créer un wrapper à `/bin/dash` qui portera le nom de cette chaîne.  Ce wrapper sera mis dans le répertoire `/tmp/p`, qui est dans le `PATH`.  
   
 	$ readelf -x .rodata ./prog | less
 	[...]

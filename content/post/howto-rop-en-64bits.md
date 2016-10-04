@@ -71,7 +71,7 @@ Ce qui fait qu'on ne pourra pas pousser un shellcode directement dans la stack, 
 
 - le programme tourne en 64 bits
 
-Les conventions d'appel de fonction ne sont pas les mêmes qu'en 32 bits, les syscalls ont de petites différences, etc.  On verra ca dans la suite...  Il faut également garder à l'esprit que l'espace des adresses valide n'est pas le même qu'en 32 bits.  En effet souvent on utilise la fameuse séquence `0x414141..`. pour marquer qu'on contrôle bien le pointer `$eip`.  En 32 bits, cette adresse est valide puisque l'espace adressable va de `0X0..0` à `0xbfffffff`.  Par contre en 64 bits, on va de `0x00...0` à `0x0000b7ffffffffff`.  Donc `0x4141...` va directement taper dans les adresses interdites.  Si on forge une adresse bidon, il faut mettre les deux premiers bytes (au moins) à zéro.  
+Les conventions d'appel de fonction ne sont pas les mêmes qu'en 32 bits, les syscalls ont de petites différences, etc.  On verra ca dans la suite...  Il faut également garder à l'esprit que l'espace des adresses valide n'est pas le même qu'en 32 bits.  En effet souvent on utilise la fameuse séquence `0x414141..`. pour marquer qu'on contrôle bien le pointer `$eip`.  En 32 bits, cette adresse est valide puisque l'espace adressable va de `0X0..0` à `0xbfffffff`.  Par contre en 64 bits, on va de `0x00...0` à `0x00007fffffffffff`.  Donc `0x4141...` va directement taper dans les adresses interdites.  Si on forge une adresse bidon, il faut mettre les deux premiers bytes (au moins) à zéro.  
 
 Cherchons la présence de fonctions qui nous aideraient bien à avoir un shell...  
 

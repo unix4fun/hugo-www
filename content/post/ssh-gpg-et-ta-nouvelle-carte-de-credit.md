@@ -39,15 +39,6 @@ J'en suis venu aux smartcards, qui loin d'être parfaites, proposent quand même
 
 Honnêtement, je vais pas reprendre le setup pas à pas, j'ai compilé une serie de liens qui m'ont aidé à piger/faire mon setup, ca devrait largement suffire pour démarrer.
 
-En ce qui concerne les smartcards, voila ce que j'ai listé:
-
-* Yubikey v4, elles ont plusieurs mode de fonctionnement qui collaborent (FIDO/U2F/CCID/HSM blablabla), en gros yubikey (si vous les ouvrez) c'est 2 MCU, un "secure" MCU qui gère la crypto/storage, NXP chaisplus combien et un MCU qui gère la comm USB/CCID, [quelqu'un l'avait fait avant moi](http://www.hexview.com/~scl/neo/), ça ne m'a pas empêché de l'ouvrir... oui, vous avez compris j'adore ouvrir les boîtes de cassoulets [http://www.hexview.com/~scl/neo/](http://www.hexview.com/~scl/neo/) mais lui au moins, il a pris des photos.
-* OpenPGP card v2.1 on les trouve un peu partout, un peu lentes mais marchent très bien (recommandées par la FSF).
-* Nitrokey, une implementation "opensource"/freemium d'une smartcard à base de MCU / gnuk.
-* Gnuk, MCU avec le code opensource Gnuk, qui utilise une lib de threading comme OS et fait tourner les opérations de crypto et la minipile USB/CCID pour repondre comme une smartcard.
-* what else?
-
-
 Voilà les liens qui m'ont aidés:
 
 * https://wiki.fsfe.org/TechDocs/CardHowtos/CardWithSubkeysUsingBackups
@@ -66,6 +57,14 @@ Voilà les liens qui m'ont aidés:
 * https://www.esev.com/blog/post/2015-01-pgp-ssh-key-on-yubikey-neo/
 * https://www.programmierecke.net/howto/gpg-ssh.html
 * https://alexcabal.com/creating-the-perfect-gpg-keypair/
+
+En ce qui concerne les smartcards, voila ce que j'ai listé:
+
+* Yubikey v4, elles ont plusieurs mode de fonctionnement qui collaborent (FIDO/U2F/CCID/HSM blablabla), en gros yubikey (si vous les ouvrez) c'est 2 MCU, un "secure" MCU qui gère la crypto/storage, NXP chaisplus combien et un MCU qui gère la comm USB/CCID, [quelqu'un l'avait fait avant moi](http://www.hexview.com/~scl/neo/), ça ne m'a pas empêché de l'ouvrir... oui, vous avez compris j'adore ouvrir les boîtes de cassoulets [http://www.hexview.com/~scl/neo/](http://www.hexview.com/~scl/neo/) mais lui au moins, il a pris des photos.
+* OpenPGP card v2.1 on les trouve un peu partout, un peu lentes mais marchent très bien (recommandées par la FSF).
+* Nitrokey, une implementation "opensource"/freemium d'une smartcard à base de MCU / gnuk.
+* Gnuk, MCU avec le code opensource Gnuk, qui utilise une lib de threading comme OS et fait tourner les opérations de crypto et la minipile USB/CCID pour repondre comme une smartcard.
+* what else?
 
 Hardware:
 

@@ -13,42 +13,42 @@ title = "ssh gpg et ta nouvelle carte de credit"
 
 Crise de la trentaine..
 
-Comme beaucoup de bouseux/geek de l'opensource (dont je fais parti), j'ai beaucoup de machines qui "trainent" servent _sporadiquement_ pour certains trucs elec-digitale/FPGA/OTG/ARM/decouverte/blabla (comme le [novena](https://www.crowdsupply.com/sutajio-kosagi/novena)) ou certaines "taches"/"test" (comme bientot l'[ORWL](https://www.crowdsupply.com/design-shift/orwl)), j'ai plusieurs "laptops" selon que je bosse (et sur quoi) ou que je "traine" sur mes projets persos (ah ca je trainee..) ou de l'apprentissage ([yeelong](https://www.amazon.com/Screen-Lemote-Yeeloong-8101_B-Netbook/dp/B005XH10NQ/ref=sr_1_2?ie=UTF8&qid=1319989211&sr=8-2?tag=electronicfro-20) pour le MIPS ou le novena pour l'arch ARM). 
+Comme beaucoup de bouseux/geeks de l'opensource (dont je fais partie), j'ai beaucoup de machines qui "traînent" et servent _sporadiquement_ pour certains trucs elec-digitale/FPGA/OTG/ARM/decouverte/blabla (comme le [novena](https://www.crowdsupply.com/sutajio-kosagi/novena)) ou certaines "tâches"/"test" (comme bientôt l'[ORWL](https://www.crowdsupply.com/design-shift/orwl)), j'ai plusieurs "laptops" selon que je bosse (et sur quoi) ou que je "traîne" sur mes projets persos (ah ça je traîne..) ou de l'apprentissage ([yeelong](https://www.amazon.com/Screen-Lemote-Yeeloong-8101_B-Netbook/dp/B005XH10NQ/ref=sr_1_2?ie=UTF8&qid=1319989211&sr=8-2?tag=electronicfro-20) pour le MIPS ou le novena pour l'arch ARM). 
 
-Le truc relou c'est que je voulais pouvoir me logguer (ah mon IRC...) souvent depuis la machine ou je suis sur le moment (OS heterogenes: bsd, linux, os/x) mais sans transferer/laisser trainer la/les clefs SSH et/ou GPG et en limitant (un peu, faut pas rever non plus.) les risques qu'un putain de malware/bouseux concurrent (oui on sait jamais) me les tapent simplement...
+Le truc relou c'est que je voulais pouvoir me logguer (ah mon IRC...) souvent depuis la machine où je suis sur le moment (OS hétérogènes: bsd, linux, os/x) mais sans transférer/laisser trainer la/les clefs SSH et/ou GPG et en limitant (un peu, faut pas rêver non plus.) les risques qu'un putain de malware/bouseux concurrent (oui on sait jamais) me les tapent simplement...
 
-Alors j'ai juste cherche, vite fait, comment je pourrais faire.. je me suis aussi demande pourquoi je l'ai pas fait avant...  je me forcais a me logguer depuis UNE seule machine trusted blablabla...bref.
+Alors j'ai juste cherché, vite fait, comment je pourrais faire.. je me suis aussi demandé pourquoi je l'ai pas fait avant...  je me forçais à me logguer depuis UNE seule machine trusted blablabla... bref.
 
 ## Comment?
 
 Y a pleins d'approches "potentielles":
 
-* un disque externe/USB chiffre qui se monte automagiquement, mais c'est relou selon les FS/crypto supportes, pas multiplateforme et bon on peut encore te taper ta clef privee (genre en memoire) meme si elle est chiffree avec ta gentille passphrase.
-* un HSM, une variante du FS qui te file une interface d'access qui "devrait" marcher partout.. mais bon.. on sait ce que c'est..driver, interface peu/pas portables/etc..
-* keybase.io qui te propose un moyen de dealer avec tes clefs GPG (mais pas que..) de maniere (IMHO) assez bordelique (mais pas que..) et complexe, mais avec une jolie CLI et une jolie interface _yoyoyo-je-suis-une-startup-a-SF-donc-jai-forcement-la-solution-to-build-a-better-world_
-* smartcards (hmm?! comment ca marche?)
-* copier-partout-et-croire-en-dieu-ou-des-esprits-que-tu-te-feras-jamais-defoncer
+* un disque externe/USB chiffré qui se monte automagiquement, mais c'est relou selon les FS/crypto supportés, pas multiplateforme et bon on peut encore te taper ta clef privée (genre en mémoire) meme si elle est chiffrée avec ta gentille passphrase.
+* un HSM, une variante du FS qui te file une interface d'accès qui "devrait" marcher partout.. mais bon.. on sait ce que c'est.. driver, interface peu/pas portables/etc..
+* keybase.io qui te propose un moyen de dealer avec tes clefs GPG (mais pas que..) de manière (IMHO) assez bordelique (mais pas que..) et complexe, mais avec une jolie CLI et une jolie interface _yoyoyo-je-suis-une-startup-à-SF-donc-jai-forcément-la-solution-to-build-a-better-world_
+* smartcards (hmm?! comment ça marche?)
+* copier-partout-et-croire-en-dieu-ou-des-esprits-que-tu-te-feras-jamais-défoncer
 * what else? (vous pouvez commenter!)
 
-Apres une brillante analyse (qui me caracterise bien moi, le bon et pretentieux bouseux opensourceux), la definition d'un threat model, le calcul du risque associe et la production de slides incroyables pour la prochaine conf a la con ou j'irais vomir/etaler ma mediocrite pour me vendre un peu plus en tentant de changer de statut (e.g. passer du cassoulet LIDL au cassoulet Williams Saurin, c'est une evolution en soi).
+Apres une brillante analyse (qui me caractérise bien moi, le bon et prétentieux bouseux opensourceux), la définition d'un threat model, le calcul du risque associé et la production de slides incroyables pour la prochaine conf à la con ou j'irais vomir/étaler ma mediocrite pour me vendre un peu plus en tentant de changer de statut (e.g. passer du cassoulet LIDL au cassoulet Williams Saurin, c'est une évolution en soi).
 
-J'en suis venu au smartcards, qui loin d'etre parfaites, proposent quand meme un compromis "sympa" pour peu que l'on _TRUSTE_ le hardware, le protocole (CCID) et son implementation (il y a des choses interessantes d'ailleurs.. ;)), finalement, je truste mon laptop et tout ses composants meme les plus "blobesques" (helas..) et critiques (ethernet / BIOS / etc..?!).
+J'en suis venu aux smartcards, qui loin d'être parfaites, proposent quand même un compromis "sympa" pour peu que l'on _TRUSTE_ le hardware, le protocole (CCID) et son implementation (il y a des choses intéressantes d'ailleurs.. ;)), finalement, je truste mon laptop et tous ses composants même les plus "blobesques" (hélas..) et critiques (ethernet / BIOS / etc..?!).
 
 
 ## Setup..
 
-Honnetement, je vais pas reprendre le setup pas a pas, j'ai compile une serie de liens qui m'ont aide a piger/faire mon setup, ca devrait largement suffire pour demarrer.
+Honnêtement, je vais pas reprendre le setup pas à pas, j'ai compilé une serie de liens qui m'ont aidé à piger/faire mon setup, ca devrait largement suffire pour démarrer.
 
-En ce qui concerne les smartcards, voila ce que j'ai liste:
+En ce qui concerne les smartcards, voila ce que j'ai listé:
 
-* Yubikey v4, elles ont plusieurs mode de fonctionnement qui collaborent (FIDO/U2F/CCID/HSM blablabla), en gros yubikey (si vous les ouvrez) c'est 2 MCU, un "secure" MCU qui gere la crypto/storage, NXP chaisplus combien et un MCU qui gere la comm USB/CCID, [quelqu'un l'avait fait avant moi](http://www.hexview.com/~scl/neo/), ca ne m'a pas empeche de l'ouvrir... oui, vous avez compris j'adore ouvrir les boites de cassoulets [http://www.hexview.com/~scl/neo/](http://www.hexview.com/~scl/neo/) mais lui au moins, il a pris des photos.
-* OpenPGP card v2.1 on les trouve un peu partout, un peu lentes mais marchent tres bien (recommandees par la FSF).
-* Nitrokey, une implementation "opensource"/freemium d'une smartcard a base de MCU / gnuk.
-* Gnuk, MCU avec le code opensource Gnuk, qui utilise une lib de threading comme OS et faire tourner les operations de crypto et la minipile USB/CCID pour repondre comme une smartcard.
+* Yubikey v4, elles ont plusieurs mode de fonctionnement qui collaborent (FIDO/U2F/CCID/HSM blablabla), en gros yubikey (si vous les ouvrez) c'est 2 MCU, un "secure" MCU qui gère la crypto/storage, NXP chaisplus combien et un MCU qui gère la comm USB/CCID, [quelqu'un l'avait fait avant moi](http://www.hexview.com/~scl/neo/), ça ne m'a pas empêché de l'ouvrir... oui, vous avez compris j'adore ouvrir les boîtes de cassoulets [http://www.hexview.com/~scl/neo/](http://www.hexview.com/~scl/neo/) mais lui au moins, il a pris des photos.
+* OpenPGP card v2.1 on les trouve un peu partout, un peu lentes mais marchent très bien (recommandées par la FSF).
+* Nitrokey, une implementation "opensource"/freemium d'une smartcard à base de MCU / gnuk.
+* Gnuk, MCU avec le code opensource Gnuk, qui utilise une lib de threading comme OS et fait tourner les opérations de crypto et la minipile USB/CCID pour repondre comme une smartcard.
 * what else?
 
 
-Voila les liens qui m'ont aide:
+Voilà les liens qui m'ont aidés:
 
 * https://wiki.fsfe.org/TechDocs/CardHowtos/CardWithSubkeysUsingBackups
 * https://www.gnupg.org/howtos/card-howto/en/smartcard-howto.html
@@ -79,17 +79,17 @@ Hardware:
 
 ## les merdes, y a toujours des merdes...
 
-* _keytocard_ ca MOVE (donc efface) les clefs privees de votre _keyring_ et les remplace par un _stub_, rappelez vous en (genre avant le backup).
-* gnupg v1 VS gnupg v2.0 VS gnupg v2.1 ca cohabite, mais pas tres bien, il y a des VRAIS differences et ca peut causer quelques emmerdes, ne vous faites pas avoir. en gros demarrez avec avec 2.1.X et stick to it now... c'est pas parfait mais ca evolue...
-* gnupg 2.1.15 l'avant derniere release (celle avec laquelle je me suis battu...) avait un bug ou la wrapper lib de threading (npth) etait utilise AVANT d'etre d'initialisee et _gpg-agent_, _scdaemon_, _dirmngr_ se mangeait un bel _assert()_ et donc ne fonctionnaient pas, mais ca compilait sans soucis, du coup la release etait une release... mais inutilisable.. j'ai fait un patch, mais 2.1.16 a ete release entre temps qui resouds ce BUG mais n'est pas encore forcement dans tout les repository de packages.
-* gnupg v2.1 cree des _stubs_ des clefs privee A CHAQUE instanciation de l'agent (--card-status par exemple), si vous avez plusieurs smartcards avec la MEME clef, oubliez pas de tuer l'agent et de "cleaner" (rm -rf $HOME/.gnupg/private-keys-v1.d/\*) sinon il va associer/garder les stubs de la smartcard precedente et au moment de l utilisation vous demander d'inserer la dite smartcard.
-* impossible d'avoir le _pinentry_ au moment de mon ssh, il me faut "preparer" l'agent, un petit _gpg2 --card-status_, suivi d'un _gpg2 -d <unfichierchiffreavecmaclefGPG>_ le tout avec ma carte insere (+ le bon PIN) et juste apres je peux faire mon ssh et ca passe.
-* _$HOME/.gnupg/scd-events_ peut etre execute a chaque instanciation de l'agent et/ou insertion d'une SC, attention, le lecteur SC standard USB et une yubikey ne se comportent pas de maniere identique, pour avoir un comportement consistent (genre killer l'agent ou cleaner les stubs est pas evident) il faut travailler un peu..
-* veillez comme tout les docs le disent a BIEN FAIRE DES BACKUPS apres les differentes etapes, creation masterkey, subkeys, etc.. et a mettre ces backups safe et offline, sinon tout ca ne sert a rien.
+* _keytocard_ ca MOVE (donc efface) les clefs privées de votre _keyring_ et les remplace par un _stub_, rappelez vous en (genre avant le backup).
+* gnupg v1 VS gnupg v2.0 VS gnupg v2.1 ça cohabite, mais pas très bien, il y a des VRAIES différences et ça peut causer quelques emmerdes, ne vous faites pas avoir. En gros démarrez avec avec 2.1.X et stick to it now... c'est pas parfait mais ça évolue...
+* gnupg 2.1.15 l'avant dernière release (celle avec laquelle je me suis battu...) avait un bug où la wrapper lib de threading (npth) etait utilisée AVANT d'être d'initialisée et _gpg-agent_, _scdaemon_, _dirmngr_ se mangeaient un bel _assert()_ et donc ne fonctionnaient pas, mais ça compilait sans soucis, du coup la release était une release... mais inutilisable.. j'ai fait un patch, mais 2.1.16 a été releasé entre temps qui resoud ce BUG mais n'est pas encore forcément dans tous les repositories de packages.
+* gnupg v2.1 crée des _stubs_ des clefs privée À CHAQUE instanciation de l'agent (--card-status par exemple), si vous avez plusieurs smartcards avec la MÊME clef, oubliez pas de tuer l'agent et de "cleaner" (rm -rf $HOME/.gnupg/private-keys-v1.d/\*) sinon il va associer/garder les stubs de la smartcard précédente et au moment de l utilisation vous demander d'insérer la dite smartcard.
+* impossible d'avoir le _pinentry_ au moment de mon ssh, il me faut "préparer" l'agent, un petit _gpg2 --card-status_, suivi d'un _gpg2 -d <unfichierchiffreavecmaclefGPG>_ le tout avec ma carte insérée (+ le bon PIN) et juste apres je peux faire mon ssh et ça passe.
+* _$HOME/.gnupg/scd-events_ peut être exécuté à chaque instanciation de l'agent et/ou insertion d'une SC, attention, le lecteur SC standard USB et une yubikey ne se comportent pas de manière identique, pour avoir un comportement consistant (genre killer l'agent ou cleaner les stubs est pas évident) il faut travailler un peu..
+* veillez comme toutes les docs le disent à BIEN FAIRE DES BACKUPS apres les différentes étapes, création masterkey, subkeys, etc.. et à mettre ces backups safe et offline, sinon tout ça ne sert à rien.
 
 
 ## Conclusion
 
-Mon francais sent des pieds mais ca marche, mes clefs ne sont plus "online", a part sur mes 2 SC, la SC donne une interface pour signer/chiffrer (via CCID) mais ne permet pas de recuperer les clefs privees directement (comme sur un FS), je peux plugger ma SC sur different systeme (BSD, Linux, OS/x) mon auth est faisable sans pour autant compremettre aussi facilement mes clefs, je n'ai rien a copier et j'ai un element hardware en plus de mon PIN, pour chiffrer mes datas et pour m'auth sur mes machines, plus feignant que ca tu meurs.
+Mon français sent des pieds mais ça marche, mes clefs ne sont plus "online", à part sur mes 2 SC, la SC donne une interface pour signer/chiffrer (via CCID) mais ne permet pas de récupérer les clefs privées directement (comme sur un FS), je peux plugger ma SC sur différents systèmes (BSD, Linux, OS/x) mon auth est faisable sans pour autant compremettre aussi facilement mes clefs, je n'ai rien à copier et j'ai un élément hardware en plus de mon PIN, pour chiffrer mes datas et pour m'auth sur mes machines, plus feignant que ça tu meurs.
 
-Un seul bemol, il faut un gnupg 2.0.X ou 2.1.16+ et c'est pas encore super "smooth", voila en vous remerciant.
+Un seul bémol, il faut un gnupg 2.0.X ou 2.1.16+ et c'est pas encore super "smooth", voilà en vous remerciant.

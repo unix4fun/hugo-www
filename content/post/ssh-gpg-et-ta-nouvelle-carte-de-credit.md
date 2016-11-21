@@ -1,7 +1,7 @@
 +++
 authors = [ "eau" ]
 description = ""
-draft = true
+draft = false
 tags = [ "ssh", "auth", "bofh", "gpg", "smartcard", "loose", "openpgp" ]
 topics = [ ]
 date = "2016-11-20T13:05:55+01:00"
